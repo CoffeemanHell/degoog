@@ -90,6 +90,7 @@
     },
     "no-results": "Keine Ergebnisse gefunden.",
     "search-failed": "Suche fehlgeschlagen. Bitte versuche es erneut.",
+    "rate-limited": "Zu viele Anfragen. Bitte warte einen Moment und versuche es erneut.",
     "no-engines": "Keine Suchmaschinen installiert. {store}, um welche zu durchsuchen und zu installieren.",
     "no-engines-store": "Gehe zum Store",
     "sidebar": {
