@@ -9,6 +9,7 @@ import { REPO_GRID_ID } from "./render/repos/repo-grid";
 import { KIND_TABS_ID } from "./render/catalog/kind-tabs";
 import { revealActiveTab } from "../shared/filter/filter-tabs";
 import { REPO_FILTER_CLASS } from "./render/catalog/repo-filter";
+import { UPDATES_MENU_CLASS } from "./render/attention/updates-menu";
 import { maybeShowRestartNotice } from "./overlays/restart-notice";
 import { createViewActions } from "./actions/view-actions";
 import {
@@ -125,13 +126,22 @@ export async function initStoreTab(
       return;
     }
     if (e.key === "Escape" && state.repoPopOpen) actions.toggleRepoPop();
+    else if (e.key === "Escape" && state.updatesOpen) {
+      actions.toggleUpdates();
+      ctx.focus(`.${UPDATES_MENU_CLASS} button`);
+    }
   });
 
   document.addEventListener("pointerdown", (e) => {
-    if (!state.repoPopOpen) return;
-    if ((e.target as Element).closest(`.${REPO_FILTER_CLASS}`)) return;
-    Object.assign(state, { repoPopOpen: false, repoPopQ: "" });
-    paint();
+    const target = e.target as Element;
+    if (state.repoPopOpen && !target.closest(`.${REPO_FILTER_CLASS}`)) {
+      Object.assign(state, { repoPopOpen: false, repoPopQ: "" });
+      paint();
+    }
+    if (state.updatesOpen && !state.updatingAll && !target.closest(`.${UPDATES_MENU_CLASS}`)) {
+      state.updatesOpen = false;
+      paint();
+    }
   });
 
   const noticeIfVisible = (): void => {
