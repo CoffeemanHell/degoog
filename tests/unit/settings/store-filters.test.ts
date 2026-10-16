@@ -1,10 +1,10 @@
 import { describe, expect, test, beforeAll, afterAll } from "bun:test";
-import type { StoreItem } from "../../../src/client/types/store-tab";
+import type { StoreItem, StoreState } from "../../../src/client/types/store-tab";
 import { installClientEnv } from "../../helpers/client-env";
 
-type FilterItems = typeof import("../../../src/client/settings/store/render/filters").filterItems;
+type Passes = typeof import("../../../src/client/settings/store/model").passes;
 
-let filterItems: FilterItems;
+let passes: Passes;
 let restoreClientEnv: () => void;
 
 const _item = (overrides: Partial<StoreItem>): StoreItem => ({
@@ -28,17 +28,19 @@ const ITEMS = [
   _item({ path: "weather", name: "Weather", type: "plugin", description: "Open-Meteo forecasts" }),
 ];
 
-const _search = (query: string): string[] =>
-  filterItems(ITEMS, "all", "all", query, null, "all").map((i) => i.path);
+const _search = (q: string): string[] => {
+  const state = { q, kind: "all", sub: "", status: "all", repoSel: [] } as unknown as StoreState;
+  return ITEMS.filter((item) => passes(state, item, "")).map((item) => item.path);
+};
 
 beforeAll(async () => {
   restoreClientEnv = installClientEnv();
-  ({ filterItems } = await import("../../../src/client/settings/store/render/filters"));
+  ({ passes } = await import("../../../src/client/settings/store/model"));
 });
 
 afterAll(() => restoreClientEnv());
 
-describe("store filterItems search", () => {
+describe("store passes search", () => {
   test("blank query keeps every item", () => {
     expect(_search("   ")).toEqual(["green", "zen", "weather"]);
   });
