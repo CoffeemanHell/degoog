@@ -36,7 +36,9 @@ export const UpdatesMenu = ({
         <span class="store-updates-icon" aria-hidden="true">
           {state.updatingAll ? <Spinner /> : <FaIcon name="fa-arrow-up" />}
         </span>
-        <span class="store-updates-n">{updates.length.toLocaleString()}</span>
+        {updates.length ? (
+          <span class="store-updates-n">{updates.length.toLocaleString()}</span>
+        ) : null}
         <span class="store-updates-label">{label}</span>
         <FaIcon
           name="fa-chevron-down"
