@@ -109,7 +109,6 @@ export const createViewActions = (ctx: StoreContext): ViewActions => {
       ctx.focus(`#${SEARCH_ID}`);
     },
     setKind,
-    showKind: (kind) => setKind(kind),
     setStatus: (status) => {
       state.status = status;
       ctx.render();

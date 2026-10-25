@@ -52,12 +52,17 @@ type Navigate = (query: string) => void;
 
 let sidebarSuggestionsController: AbortController | null = null;
 
+const abortSidebarSuggestions = (): void => {
+  sidebarSuggestionsController?.abort();
+  sidebarSuggestionsController = null;
+};
+
 export const loadSidebarSuggestions = (
   query: string,
   type: string,
   navigate: Navigate,
 ): void => {
-  sidebarSuggestionsController?.abort();
+  abortSidebarSuggestions();
   state.currentRelatedSearches = [];
   if (isImageSearchType(type) || !state.displaySearchSuggestions) return;
 
@@ -132,6 +137,8 @@ export const prepareResultsUi = (query: string, resolvedType: string): void => {
 };
 
 export const showSearchFailure = (message: string): void => {
+  abortSidebarSuggestions();
+  state.currentRelatedSearches = [];
   abortSlotPanels();
   abortGlancePanels();
   clearSlotPanels();

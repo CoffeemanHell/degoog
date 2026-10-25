@@ -3,15 +3,15 @@ import { afterAll, beforeAll, beforeEach, describe, expect, mock, test } from "b
 const SEARCH_UTILS_MOD = "../../src/server/utils/search";
 const searchUtilsReal = { ...(await import(SEARCH_UTILS_MOD)) };
 
-let buckets: string[] = [];
+let buckets: { bucket: string; scale: number }[] = [];
 
 let router: { request: (req: Request | string, init?: RequestInit) => Response | Promise<Response> };
 
 beforeAll(async () => {
   mock.module(SEARCH_UTILS_MOD, () => ({
     ...searchUtilsReal,
-    _applyRateLimit: async (_c: unknown, bucket = "") => {
-      buckets.push(bucket);
+    _applyRateLimit: async (_c: unknown, bucket = "", scale = 1) => {
+      buckets.push({ bucket, scale });
       return null;
     },
   }));
@@ -34,20 +34,25 @@ const post = (path: string, body: unknown) =>
   });
 
 describe("slot routes rate limiting", () => {
-  test("every slot call a search makes gets its own bucket, apart from the search one", async () => {
+  test("every slot call a search makes shares one bucket, apart from the search one, sized for all of them", async () => {
     await post("/api/slots", { query: "berlin" });
     await post("/api/slots/glance", { query: "berlin" });
     await post("/api/slots", { query: "berlin", results: [] });
     await post("/api/slots/glance", { query: "berlin", results: [] });
     expect(buckets).toHaveLength(4);
-    expect(buckets).not.toContain("");
-    expect(new Set(buckets).size).toBe(4);
+    expect(new Set(buckets.map((b) => b.bucket))).toEqual(new Set(["slots:"]));
+    for (const { scale } of buckets) expect(scale).toBe(4);
   });
 
-  test("repeat calls of the same kind share a bucket", async () => {
-    await post("/api/slots", { query: "berlin" });
-    await post("/api/slots", { query: "rome" });
+  test("malformed bodies still count against the limit", async () => {
+    for (const path of ["/api/slots", "/api/slots/glance"]) {
+      const res = await router.request(`http://localhost${path}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "{not json",
+      });
+      expect(res.status).toBe(400);
+    }
     expect(buckets).toHaveLength(2);
-    expect(buckets[0]).toBe(buckets[1]);
   });
 });

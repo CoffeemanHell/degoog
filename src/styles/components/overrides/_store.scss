@@ -485,7 +485,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .store-spinner {
-    animation-duration: 2s;
+    animation: none;
   }
 }
 

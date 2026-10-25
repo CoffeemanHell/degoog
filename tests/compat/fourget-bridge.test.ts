@@ -9,8 +9,8 @@ import {
   type RunnerSpec,
 } from "../../src/server/extensions/compatibility-layer/rpc";
 import {
-  PHP_RUNNER_ARGS,
   phpBinary,
+  phpRunnerArgs,
   phpStatus,
 } from "../../src/server/extensions/compatibility-layer/fourget/php-runtime";
 import { FOURGET_PAGES } from "../../src/server/extensions/compatibility-layer/fourget/pages";
@@ -122,7 +122,7 @@ class demo {
 
 const SPEC: RunnerSpec = {
   bin: phpBinary(),
-  args: PHP_RUNNER_ARGS,
+  args: phpRunnerArgs(),
   label: "4get",
 };
 
@@ -323,22 +323,41 @@ describe("4get php bridge", () => {
     for (const engine of out.engines) expect(engine.error).toBeUndefined();
   });
 
-  maybe("a scraper cannot spawn processes", async () => {
-    const calls = ["system('id')", "shell_exec('id')", "exec('id')", "proc_open('id', [], $p)", "popen('id', 'r')"];
+  test("functions the host php.ini disables stay disabled", () => {
+    const directive = phpRunnerArgs(["curl_exec", "exec"]).find((arg) =>
+      arg.startsWith("disable_functions="),
+    );
+    const names = directive!.slice("disable_functions=".length).split(",");
+    expect(names).toContain("curl_exec");
+    expect(names).toContain("exec");
+    expect(names).toContain("proc_open");
+    expect(names.filter((name) => name === "exec")).toHaveLength(1);
+  });
+
+  maybe("a scraper cannot spawn processes or send mail", async () => {
+    const calls = [
+      "system('id')",
+      "shell_exec('id')",
+      "exec('id')",
+      "proc_open('id', [], $p)",
+      "popen('id', 'r')",
+      "mail('a@b.c', 's', 'm')",
+      "mb_send_mail('a@b.c', 's', 'm')",
+    ];
     for (const call of calls) {
+      const fn = call.slice(0, call.indexOf("("));
+      const code = `shell_${fn}`;
+      const src = join(root, "scraper", `${code}.php`);
       writeFileSync(
-        join(root, "scraper", "shell.php"),
-        FAKE_SCRAPER.replace("class demo", "class shell").replace(
+        src,
+        FAKE_SCRAPER.replace("class demo", `class ${code}`).replace(
           "public function web($get){",
           `public function web($get){\n\t\t${call};`,
         ),
       );
-      await expect(
-        search({
-          code: "shell",
-          scrapers: [{ code: "shell", src: join(root, "scraper", "shell.php") }],
-        }),
-      ).rejects.toThrow(/undefined function/);
+      await expect(search({ code, scrapers: [{ code, src }] })).rejects.toThrow(
+        new RegExp(`undefined function \\S*\\b${fn}\\(`),
+      );
     }
   });
 });

@@ -37,6 +37,7 @@ export class FetchEventStream implements SearchEventSource {
   }
 
   private _emit(event: string, data: string): void {
+    if (this._abort.signal.aborted) return;
     this._target.dispatchEvent(new MessageEvent(event, { data }));
   }
 
@@ -70,7 +71,7 @@ export class FetchEventStream implements SearchEventSource {
           if (parsed) this._emit(parsed.event, parsed.data);
         }
       }
-      if (!this._abort.signal.aborted) this._emit("error", "{}");
+      this._emit("error", "{}");
     } catch (err) {
       if (this._abort.signal.aborted) return;
       console.warn("[streaming-search] stream failed", err);

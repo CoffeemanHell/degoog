@@ -364,7 +364,21 @@ async function _performBangCommand(
       if (resultsList) render(<NoResults>{error ?? "Disabled."}</NoResults>, resultsList);
       return;
     }
-    if (!res.ok) throw new Error("not found");
+    if (res.status === 404) {
+      if (resultsMeta) resultsMeta.textContent = "";
+      if (resultsList)
+        render(
+          <NoResults>
+            Unknown command. Type <strong>!help</strong> for available commands.
+          </NoResults>,
+          resultsList,
+        );
+      return;
+    }
+    if (!res.ok) {
+      showSearchFailure(searchFailureMessage(res.status));
+      return;
+    }
     const data = (await res.json()) as {
       type: string;
       primaryType?: string;
@@ -458,14 +472,7 @@ async function _performBangCommand(
     }
   } catch {
     if (!isCurrentSearch(seq)) return;
-    if (resultsMeta) resultsMeta.textContent = "";
-    if (resultsList)
-      render(
-        <NoResults>
-          Unknown command. Type <strong>!help</strong> for available commands.
-        </NoResults>,
-        resultsList,
-      );
+    showSearchFailure(searchFailureMessage());
   }
 }
 
